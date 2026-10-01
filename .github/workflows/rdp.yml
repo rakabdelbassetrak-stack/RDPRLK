@@ -1,0 +1,40 @@
+name: Windows-RDP
+
+on: 
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - name: Enable RDP
+      shell: cmd
+      run: |
+        reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+        netsh advfirewall firewall set rule group="remote desktop" new enable=Yes
+        net user runneradmin YourPassword123!
+
+    - name: Create Tunnel
+      shell: powershell
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-pc-windows-msvc.zip" -OutFile "bore.zip"
+        Expand-Archive -Path "bore.zip" -DestinationPath "." -Force
+        
+        Write-Host "========================================"
+        Write-Host "RDP INFO:"
+        Write-Host "Username: runneradmin"
+        Write-Host "Password: YourPassword123!"
+        Write-Host "========================================"
+        
+        .\bore.exe local 3389 --to bore.pub
+        
+    - name: Keep Alive
+      shell: powershell
+      run: |
+        $timeout = 360
+        for ($i = 0; $i -lt $timeout; $i++) {
+          Write-Host "Session active: $i minutes"
+          Start-Sleep -Seconds 60
+        }
